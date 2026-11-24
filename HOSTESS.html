@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escáner Hostess - Recepción</title>
+  <!-- Librería de Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Librería para escanear QR con cámara -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --success: #16a34a;
+      --success-hover: #15803d;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-bottom: 18px;
+    }
+    h1 { font-size: 1.3rem; margin: 0 0 12px 0; text-align: center; }
+    #reader {
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #000;
+    }
+    .status-msg {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+    /* Ficha del cliente escaneado */
+    .ficha { display: none; border-top: 5px solid var(--primary); }
+    .ficha-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .badge {
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .badge-pendiente { background: #fef3c7; color: #92400e; }
+    .badge-llegada { background: #dcfce7; color: #166534; }
+    .dato { margin-bottom: 12px; }
+    .dato-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .dato-valor {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .notas-box {
+      background: #f9fafb;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border-left: 3px solid #d1d5db;
+      font-size: 0.95rem;
+      margin-top: 4px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn-confirmar { background: var(--success); color: white; }
+    .btn-confirmar:hover { background: var(--success-hover); }
+    .btn-otro { background: #e5e7eb; color: #374151; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <h1>Recepción · Escáner de Citas</h1>
+    <div id="reader"></div>
+    <p id="statusText" class="status-msg">Apunta la cámara al código QR del cliente</p>
+  </div>
+
+  <!-- Ficha de información del cliente -->
+  <div id="fichaCliente" class="card ficha">
+    <div class="ficha-header">
+      <span style="font-size: 0.85rem; color: var(--muted);">Cita verificada</span>
+      <span id="estadoBadge" class="badge"></span>
+    </div>
+
+    <div class="dato">
+      <div class="dato-label">Cliente</div>
+      <div id="valNombre" class="dato-valor" style="font-size: 1.35rem;"></div>
+    </div>
+
+    <div class="dato">
+      <div class="dato-label">Fecha y Hora Programada</div>
+      <div id="valFecha" class="dato-valor"></div>
+    </div>
+
+    <div class="dato">
+      <div class="dato-label">Asesor Asignado</div>
+      <div id="valAsesor" class="dato-valor"></div>
+    </div>
+
+    <div class="dato">
+      <div class="dato-label">Teléfono</div>
+      <div id="valTelefono" class="dato-valor"></div>
+    </div>
+
+    <div class="dato">
+      <div class="dato-label">Notas / Motivo</div>
+      <div id="valNotas" class="notas-box"></div>
+    </div>
+
+    <button id="btnConfirmar" class="btn-confirmar" onclick="confirmarLlegada()">
+      Confirmar Llegada a Recepción
+    </button>
+    <button class="btn-otro" onclick="reiniciarEscaner()">
+      Escanear Siguiente Cliente
+    </button>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://kfspfziawwwzlqfsvpep.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_O8dWIEqgtNt3uSO_964wkg_-3AaUdgV';
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let citaActual = null;
+  let html5QrcodeScanner = null;
+  let bloqueado = false;
+
+  // Iniciar cámara trasera
+  function iniciarCamara() {
+    html5QrcodeScanner = new Html5Qrcode("reader");
+    html5QrcodeScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 240, height: 240 } },
+      onScanSuccess
+    ).catch(err => {
+      document.getElementById('statusText').textContent =
+        "No se pudo acceder a la cámara. Asegúrate de dar permisos en tu navegador.";
+      console.error(err);
+    });
+  }
+
+  // Cuando la cámara detecta un QR
+  async function onScanSuccess(decodedText) {
+    if (bloqueado) return;
+    bloqueado = true;
+
+    document.getElementById('statusText').textContent = "Buscando cita en el sistema...";
+
+    const { data, error } = await supabaseClient
+      .from('citas')
+      .select('*')
+      .eq('id', decodedText.trim())
+      .single();
+
+    if (error || !data) {
+      alert("Código QR no válido o cita no encontrada.");
+      bloqueado = false;
+      document.getElementById('statusText').textContent = "Apunta la cámara al código QR del cliente";
+      return;
+    }
+
+    // Pausar cámara mientras se revisa la ficha
+    html5QrcodeScanner.pause();
+    mostrarFicha(data);
+  }
+
+  function mostrarFicha(cita) {
+    citaActual = cita;
+    document.getElementById('fichaCliente').style.display = 'block';
+    document.getElementById('statusText').textContent = "Cita encontrada";
+
+    document.getElementById('valNombre').textContent = cita.cliente_nombre;
+    document.getElementById('valFecha').textContent = new Date(cita.fecha_cita).toLocaleString('es-MX', {
+      dateStyle: 'full',
+      timeStyle: 'short'
+    });
+    document.getElementById('valAsesor').textContent = cita.asesor;
+    document.getElementById('valTelefono').textContent = cita.telefono || 'No registrado';
+    document.getElementById('valNotas').textContent = cita.notas || 'Sin notas adicionales';
+
+    const badge = document.getElementById('estadoBadge');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+
+    if (cita.estado === 'En recepción') {
+      badge.textContent = 'En recepción';
+      badge.className = 'badge badge-llegada';
+      btnConfirmar.style.display = 'none';
+    } else {
+      badge.textContent = cita.estado;
+      badge.className = 'badge badge-pendiente';
+      btnConfirmar.style.display = 'block';
+      btnConfirmar.disabled = false;
+      btnConfirmar.textContent = 'Confirmar Llegada a Recepción';
+    }
+  }
+
+  // Actualizar estado en Supabase (dispara el tiempo real en la otra pantalla)
+  async function confirmarLlegada() {
+    if (!citaActual) return;
+    const btn = document.getElementById('btnConfirmar');
+    btn.disabled = true;
+    btn.textContent = 'Registrando llegada...';
+
+    const { data, error } = await supabaseClient
+      .from('citas')
+      .update({
+        estado: 'En recepción',
+        hora_llegada: new Date().toISOString()
+      })
+      .eq('id', citaActual.id)
+      .select()
+      .single();
+
+    if (error) {
+      alert("Error al actualizar: " + error.message);
+      btn.disabled = false;
+      return;
+    }
+
+    mostrarFicha(data);
+  }
+
+  function reiniciarEscaner() {
+    citaActual = null;
+    bloqueado = false;
+    document.getElementById('fichaCliente').style.display = 'none';
+    document.getElementById('statusText').textContent = "Apunta la cámara al código QR del cliente";
+    html5QrcodeScanner.resume();
+  }
+
+  iniciarCamara();
+</script>
+
+</body>
+</html>
