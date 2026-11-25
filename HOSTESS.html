@@ -83,6 +83,19 @@
     #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #1f242b; }
     .status-msg { text-align: center; font-size: 0.88rem; color: var(--muted); margin: 10px 0 0 0; }
 
+    /* Alerta de QR ya usado */
+    .alerta-usado {
+      background: #fdf2f4;
+      border: 1px solid #f5c2cb;
+      color: var(--primary);
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: none;
+    }
+
     /* Ficha principal de la Hostess */
     .ficha { display: none; border-top: 5px solid var(--primary); }
     .hero-box {
@@ -143,6 +156,10 @@
       cursor: pointer;
       color: white;
     }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
     .btn-asistio { background: var(--green); }
     .btn-tarde { background: var(--orange); }
     .btn-noshow { background: var(--red); }
@@ -169,7 +186,7 @@
 
 <div class="container">
   <div class="header-brand">
-    <img src="logo.png" alt="Logo Toyota Cuautitlán" class="header-logo" onerror="this.style.display='none'">
+    <img src="https://image.jimcdn.com/app/cms/image/transf/none/path/s249377f5b481489b/image/i37e7608f0284c2e1/version/1723751621/image.png" alt="Logo Toyota Cuautitlán" class="header-logo" onerror="this.style.display='none'">
     <span class="header-label">Recepción · Hostess</span>
   </div>
 
@@ -188,6 +205,10 @@
 
     <div id="fichaCliente" class="card ficha">
       <span id="estadoActualBadge" class="badge-estado"></span>
+      <div id="alertaYaUsado" class="alerta-usado">
+        Este código QR ya fue escaneado y registrado anteriormente. No se puede volver a procesar.
+      </div>
+
       <div class="hero-box">
         <div class="label-sm">Cliente</div>
         <div id="valNombre" class="val-cliente"></div>
@@ -201,11 +222,13 @@
 
       <div id="extraDatos" class="extra-info"></div>
 
-      <div class="label-sm" style="margin-bottom:8px;">Marcar estatus de asistencia:</div>
-      <div class="acciones-grid">
-        <button class="btn btn-asistio" onclick="actualizarEstatus('Asistió')">Asistió a tiempo</button>
-        <button class="btn btn-tarde" onclick="actualizarEstatus('Llegó tarde')">Llegó tarde</button>
-        <button class="btn btn-noshow" onclick="actualizarEstatus('No asistió')">No asistió (No Show)</button>
+      <div id="bloqueAcciones">
+        <div class="label-sm" style="margin-bottom:8px;">Marcar estatus de asistencia:</div>
+        <div class="acciones-grid">
+          <button id="btnAsistio" class="btn btn-asistio" onclick="actualizarEstatus('Asistió')">Asistió a tiempo</button>
+          <button id="btnTarde" class="btn btn-tarde" onclick="actualizarEstatus('Llegó tarde')">Llegó tarde</button>
+          <button id="btnNoShow" class="btn btn-noshow" onclick="actualizarEstatus('No asistió')">No asistió (No Show)</button>
+        </div>
       </div>
 
       <button class="btn btn-secundario" onclick="reiniciarEscaner()">Escanear Siguiente Cliente</button>
@@ -273,6 +296,7 @@
   let citaActual = null;
   let html5QrcodeScanner = null;
   let bloqueado = false;
+  let qrYaProcesado = false;
 
   function cambiarVista(vista) {
     if (vista === 'escaner') {
@@ -324,7 +348,6 @@
   function mostrarFicha(cita) {
     citaActual = cita;
     document.getElementById('fichaCliente').style.display = 'block';
-    document.getElementById('statusText').textContent = "Cita cargada";
     document.getElementById('estadoActualBadge').textContent = cita.estado;
 
     document.getElementById('valNombre').textContent = cita.cliente_nombre;
@@ -342,10 +365,31 @@
       <strong>Valet:</strong> ${cita.requiere_valet ? 'SÍ requiere (Sin costo)' : 'No requiere'}<br>
       ${cita.notas ? '<strong>Notas:</strong> ' + cita.notas : ''}
     `;
+
+    // Bloquea si el QR ya tenía un estatus distinto a 'Pendiente' o si ya se procesó en esta sesión
+    const yaEscaneado = qrYaProcesado || (cita.estado && cita.estado !== 'Pendiente');
+    const alerta = document.getElementById('alertaYaUsado');
+    const bloqueAcciones = document.getElementById('bloqueAcciones');
+    const btns = document.querySelectorAll('#bloqueAcciones button');
+
+    if (yaEscaneado) {
+      document.getElementById('statusText').textContent = "QR ya escaneado anteriormente";
+      alerta.style.display = 'block';
+      bloqueAcciones.style.display = 'none';
+      btns.forEach(b => b.disabled = true);
+    } else {
+      document.getElementById('statusText').textContent = "Cita cargada";
+      alerta.style.display = 'none';
+      bloqueAcciones.style.display = 'block';
+      btns.forEach(b => b.disabled = false);
+    }
   }
 
   async function actualizarEstatus(nuevoEstado) {
-    if (!citaActual) return;
+    if (!citaActual || qrYaProcesado || (citaActual.estado && citaActual.estado !== 'Pendiente')) {
+      alert("Este QR ya fue escaneado y no se puede volver a registrar.");
+      return;
+    }
 
     const { data, error } = await supabaseClient
       .from('citas')
@@ -354,22 +398,27 @@
         hora_llegada: new Date().toISOString()
       })
       .eq('id', citaActual.id)
+      .eq('estado', 'Pendiente')
       .select()
       .single();
 
-    if (error) {
-      alert("Error al actualizar: " + error.message);
+    if (error || !data) {
+      alert("Este QR ya había sido procesado o ocurrió un error al actualizar.");
       return;
     }
 
+    qrYaProcesado = true;
     mostrarFicha(data);
-    alert(`Estatus actualizado a: ${nuevoEstado}`);
+    alert(`Estatus actualizado a: ${nuevoEstado}. Este QR queda bloqueado para futuros escaneos.`);
   }
 
   function reiniciarEscaner() {
     citaActual = null;
     bloqueado = false;
+    qrYaProcesado = false;
     document.getElementById('fichaCliente').style.display = 'none';
+    document.getElementById('alertaYaUsado').style.display = 'none';
+    document.getElementById('bloqueAcciones').style.display = 'block';
     document.getElementById('statusText').textContent = "Apunta la cámara al QR del cliente";
     html5QrcodeScanner.resume();
   }
