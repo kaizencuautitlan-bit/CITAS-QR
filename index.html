@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generador de Citas QR</title>
+  <title>Registro de Citas de Servicio</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
+      --primary: #1d4ed8;
+      --primary-hover: #1e40af;
       --bg: #f3f4f6;
       --card: #ffffff;
-      --text: #1f2937;
+      --text: #111827;
       --muted: #6b7280;
     }
     * { box-sizing: border-box; }
@@ -24,45 +24,68 @@
       padding: 20px;
     }
     .container {
-      max-width: 1000px;
+      max-width: 1100px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: 1fr;
       gap: 24px;
     }
-    @media (min-width: 768px) {
+    @media (min-width: 850px) {
       .grid-top {
         display: grid;
-        grid-template-columns: 1.2fr 0.8fr;
+        grid-template-columns: 1.35fr 0.65fr;
         gap: 24px;
       }
     }
     .card {
       background: var(--card);
       padding: 24px;
-      border-radius: 12px;
+      border-radius: 14px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
     h2 { margin-top: 0; font-size: 1.25rem; }
-    .form-group { margin-bottom: 14px; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 600px) {
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      .full-width { grid-column: span 2; }
+    }
     label {
       display: block;
-      font-size: 0.875rem;
+      font-size: 0.85rem;
       font-weight: 600;
       margin-bottom: 5px;
     }
-    input, textarea {
+    .req { color: #dc2626; }
+    input, select, textarea {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid #d1d5db;
       border-radius: 8px;
       font-size: 0.95rem;
+      background: #fff;
+    }
+    .valet-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 12px 14px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .valet-box input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
     }
     button {
       background-color: var(--primary);
       color: white;
       border: none;
-      padding: 12px 18px;
+      padding: 13px 18px;
       border-radius: 8px;
       font-size: 0.95rem;
       font-weight: 600;
@@ -77,19 +100,13 @@
       border: 1px solid #bfdbfe;
       margin-top: 12px;
     }
-    .btn-outline:hover { background: #dbeafe; }
-    .btn-sm {
-      padding: 6px 10px;
-      font-size: 0.8rem;
-      width: auto;
-    }
+    .btn-sm { padding: 6px 10px; font-size: 0.8rem; width: auto; margin: 0; }
     .qr-box {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      min-height: 280px;
     }
     #qrContainer {
       padding: 16px;
@@ -98,7 +115,6 @@
       border-radius: 8px;
       margin: 12px 0;
     }
-    .placeholder-qr { color: var(--muted); font-size: 0.9rem; }
     .table-header {
       display: flex;
       justify-content: space-between;
@@ -116,32 +132,17 @@
       border-radius: 999px;
       font-weight: 600;
     }
-    .dot {
-      width: 8px;
-      height: 8px;
-      background: #16a34a;
-      border-radius: 50%;
-    }
+    .dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; }
     .table-wrapper { overflow-x: auto; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
-    th, td {
-      text-align: left;
-      padding: 12px;
-      border-bottom: 1px solid #e5e7eb;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 11px; border-bottom: 1px solid #e5e7eb; }
     th { background: #f9fafb; color: var(--muted); font-weight: 600; }
-    .badge {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.78rem;
-      font-weight: 600;
-    }
-    .badge-pendiente { background: #fef3c7; color: #92400e; }
-    .badge-llegada { background: #dcfce7; color: #166534; }
+    .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; display: inline-block; }
+    .b-pendiente { background: #fef3c7; color: #92400e; }
+    .b-asistio { background: #dcfce7; color: #166534; }
+    .b-tarde { background: #ffedd5; color: #9a3412; }
+    .b-noshow { background: #fee2e2; color: #991b1b; }
+    .b-sincita { background: #e0e7ff; color: #3730a3; }
   </style>
 </head>
 <body>
@@ -149,39 +150,85 @@
 <div class="container">
   <div class="grid-top">
     <div class="card">
-      <h2>Registrar Nueva Cita</h2>
-      <form id="formCita">
-        <div class="form-group">
-          <label>Nombre completo del cliente *</label>
+      <h2>Agendar Cita de Servicio</h2>
+      <form id="formCita" class="form-grid">
+        <div class="full-width">
+          <label>Nombre completo del cliente <span class="req">*</span></label>
           <input type="text" id="cliente_nombre" placeholder="Ej. Carlos Mendoza" required>
         </div>
-        <div class="form-group">
-          <label>Teléfono / WhatsApp</label>
-          <input type="tel" id="telefono" placeholder="Ej. 55 1234 5678">
+
+        <div>
+          <label>Teléfono / WhatsApp <span class="req">*</span></label>
+          <input type="tel" id="telefono" placeholder="Ej. 55 1234 5678" required>
         </div>
-        <div class="form-group">
-          <label>Fecha y hora de la cita *</label>
-          <input type="datetime-local" id="fecha_cita" required>
+
+        <div>
+          <label>Correo electrónico <span class="req">*</span></label>
+          <input type="email" id="correo" placeholder="Ej. cliente@correo.com" required>
         </div>
-        <div class="form-group">
-          <label>Asesor asignado *</label>
-          <input type="text" id="asesor" placeholder="Ej. Mariana López" required>
+
+        <div>
+          <label>Modelo del vehículo <span class="req">*</span></label>
+          <input type="text" id="modelo" placeholder="Ej. Corolla 2024" required>
         </div>
-        <div class="form-group">
-          <label>Notas / Motivo de visita</label>
-          <textarea id="notas" rows="2" placeholder="Ej. Interesado en cotización"></textarea>
+
+        <div>
+          <label>Número de Placa</label>
+          <input type="text" id="placa" placeholder="Ej. ABC-123-D" style="text-transform: uppercase;">
         </div>
-        <button type="submit" id="btnGuardar">Generar Cita y Código QR</button>
+
+        <div class="full-width">
+          <label>VIN (Número de Serie - 17 caracteres)</label>
+          <input type="text" id="vin" maxlength="17" placeholder="Ej. 1HGCM82633A004352" style="text-transform: uppercase;">
+        </div>
+
+        <div>
+          <label>Tipo de servicio <span class="req">*</span></label>
+          <select id="tipo_servicio" required>
+            <option value="Mantenimiento">Mantenimiento</option>
+            <option value="Diagnóstico">Diagnóstico</option>
+            <option value="Reparación">Reparación</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Fecha de cita <span class="req">*</span></label>
+          <input type="date" id="fecha_dia" required>
+        </div>
+
+        <div class="full-width">
+          <label>Horario deseado (07:00 a 17:00 hrs) <span class="req">*</span></label>
+          <select id="fecha_hora" required></select>
+        </div>
+
+        <div class="full-width">
+          <div class="valet-box">
+            <input type="checkbox" id="requiere_valet">
+            <label for="requiere_valet" style="margin:0; cursor:pointer;">
+              Requiere servicio de Valet <strong>(Sin costo)</strong>
+            </label>
+          </div>
+        </div>
+
+        <div class="full-width">
+          <label>Comentarios adicionales</label>
+          <textarea id="notas" rows="2" placeholder="Detalles adicionales del servicio o vehículo..."></textarea>
+        </div>
+
+        <div class="full-width">
+          <button type="submit" id="btnGuardar">Generar Cita y Código QR</button>
+        </div>
       </form>
     </div>
 
     <div class="card qr-box">
-      <h2>Código QR de Acceso</h2>
-      <div id="qrPlaceholder" class="placeholder-qr">
-        Registra una cita o selecciona "Ver QR" en la tabla para visualizarlo aquí.
+      <h2>Pase QR del Cliente</h2>
+      <div id="qrPlaceholder" style="color: var(--muted); font-size: 0.9rem;">
+        Registra una cita o haz clic en "Ver QR" en la tabla para visualizarlo aquí.
       </div>
       <div id="qrArea" style="display: none; width: 100%;">
-        <strong id="qrClienteNombre" style="display:block; font-size: 1.05rem;"></strong>
+        <strong id="qrClienteNombre" style="display:block; font-size: 1.1rem;"></strong>
+        <div id="qrServicioTexto" style="font-size: 0.9rem; color: var(--primary); font-weight: 600;"></div>
         <small id="qrFechaTexto" style="color: var(--muted);"></small>
         <div style="display:flex; justify-content:center;">
           <div id="qrContainer"></div>
@@ -193,22 +240,23 @@
 
   <div class="card">
     <div class="table-header">
-      <h2 style="margin:0;">Citas Registradas</h2>
+      <h2 style="margin:0;">Monitor de Recepción y Citas</h2>
       <span class="live-badge"><span class="dot"></span> En tiempo real</span>
     </div>
     <div class="table-wrapper">
       <table>
         <thead>
           <tr>
-            <th>Cliente</th>
+            <th>Cliente / Contacto</th>
+            <th>Vehículo / VIN</th>
+            <th>Servicio / Valet</th>
             <th>Fecha y Hora</th>
-            <th>Asesor</th>
             <th>Estado</th>
-            <th>Acción</th>
+            <th>QR</th>
           </tr>
         </thead>
         <tbody id="tablaCitas">
-          <tr><td colspan="5" style="text-align:center; color:#6b7280;">Cargando citas...</td></tr>
+          <tr><td colspan="6" style="text-align:center; color:#6b7280;">Cargando citas...</td></tr>
         </tbody>
       </table>
     </div>
@@ -218,9 +266,20 @@
 <script>
   const SUPABASE_URL = 'https://kfspfziawwwzlqfsvpep.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_O8dWIEqgtNt3uSO_964wkg_-3AaUdgV';
-
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let citaActualQR = null;
+
+  function generarHorarios() {
+    const select = document.getElementById('fecha_hora');
+    for (let h = 7; h <= 17; h++) {
+      const horaStr = h.toString().padStart(2, '0');
+      select.innerHTML += `<option value="${horaStr}:00">${horaStr}:00 hrs</option>`;
+      if (h < 17) {
+        select.innerHTML += `<option value="${horaStr}:30">${horaStr}:30 hrs</option>`;
+      }
+    }
+  }
+  generarHorarios();
 
   async function cargarCitas() {
     const { data, error } = await supabaseClient
@@ -229,16 +288,24 @@
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error al cargar citas:', error);
+      console.error('Error:', error);
       return;
     }
     renderizarTabla(data);
   }
 
+  function obtenerClaseEstado(estado) {
+    if (estado === 'Asistió' || estado === 'En recepción') return 'b-asistio';
+    if (estado === 'Llegó tarde') return 'b-tarde';
+    if (estado === 'No asistió') return 'b-noshow';
+    if (estado === 'Sin cita') return 'b-sincita';
+    return 'b-pendiente';
+  }
+
   function renderizarTabla(citas) {
     const tbody = document.getElementById('tablaCitas');
     if (!citas || citas.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#6b7280;">No hay citas registradas aún.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#6b7280;">No hay citas registradas aún.</td></tr>';
       return;
     }
 
@@ -248,22 +315,25 @@
         dateStyle: 'medium',
         timeStyle: 'short'
       });
-      const esLlegada = cita.estado === 'En recepción';
-      const claseBadge = esLlegada ? 'badge-llegada' : 'badge-pendiente';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>
           <strong>${cita.cliente_nombre}</strong><br>
-          <small style="color:#6b7280;">${cita.telefono || ''}</small>
+          <small style="color:#6b7280;">${cita.telefono || ''} ${cita.correo ? '· ' + cita.correo : ''}</small>
+        </td>
+        <td>
+          <strong>${cita.modelo || 'N/A'}</strong> ${cita.placa ? '(' + cita.placa + ')' : ''}<br>
+          <small style="color:#6b7280;">VIN: ${cita.vin || 'No registrado'}</small>
+        </td>
+        <td>
+          ${cita.tipo_servicio || 'General'}<br>
+          ${cita.requiere_valet ? '<small style="color:#1d4ed8; font-weight:600;">Con Valet (Sin costo)</small>' : '<small style="color:#9ca3af;">Sin Valet</small>'}
         </td>
         <td>${fechaFormateada}</td>
-        <td>${cita.asesor}</td>
-        <td><span class="badge ${claseBadge}">${cita.estado}</span></td>
+        <td><span class="badge ${obtenerClaseEstado(cita.estado)}">${cita.estado}</span></td>
         <td>
-          <button class="btn-outline btn-sm" style="margin:0;" onclick='mostrarQR(${JSON.stringify(cita)})'>
-            Ver QR
-          </button>
+          <button class="btn-outline btn-sm" onclick='mostrarQR(${JSON.stringify(cita)})'>Ver QR</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -276,12 +346,22 @@
     btn.disabled = true;
     btn.textContent = 'Guardando...';
 
+    const dia = document.getElementById('fecha_dia').value;
+    const hora = document.getElementById('fecha_hora').value;
+    const fechaCompleta = new Date(`${dia}T${hora}:00`).toISOString();
+
     const nuevaCita = {
       cliente_nombre: document.getElementById('cliente_nombre').value.trim(),
       telefono: document.getElementById('telefono').value.trim(),
-      fecha_cita: new Date(document.getElementById('fecha_cita').value).toISOString(),
-      asesor: document.getElementById('asesor').value.trim(),
-      notas: document.getElementById('notas').value.trim()
+      correo: document.getElementById('correo').value.trim(),
+      modelo: document.getElementById('modelo').value.trim(),
+      placa: document.getElementById('placa').value.trim().toUpperCase(),
+      vin: document.getElementById('vin').value.trim().toUpperCase(),
+      tipo_servicio: document.getElementById('tipo_servicio').value,
+      fecha_cita: fechaCompleta,
+      requiere_valet: document.getElementById('requiere_valet').checked,
+      notas: document.getElementById('notas').value.trim(),
+      estado: 'Pendiente'
     };
 
     const { data, error } = await supabaseClient
@@ -294,7 +374,7 @@
     btn.textContent = 'Generar Cita y Código QR';
 
     if (error) {
-      alert('Error al guardar la cita: ' + error.message);
+      alert('Error al guardar: ' + error.message);
       return;
     }
 
@@ -307,6 +387,7 @@
     document.getElementById('qrPlaceholder').style.display = 'none';
     document.getElementById('qrArea').style.display = 'block';
     document.getElementById('qrClienteNombre').textContent = cita.cliente_nombre;
+    document.getElementById('qrServicioTexto').textContent = `${cita.tipo_servicio || ''} · ${cita.modelo || ''}`;
     document.getElementById('qrFechaTexto').textContent = new Date(cita.fecha_cita).toLocaleString('es-MX', {
       dateStyle: 'medium',
       timeStyle: 'short'
@@ -355,6 +436,5 @@
 
   cargarCitas();
 </script>
-
 </body>
 </html>
