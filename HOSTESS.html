@@ -3,19 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Escáner Hostess - Recepción</title>
-  <!-- Librería de Supabase -->
+  <title>Recepción Hostess</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Librería para escanear QR con cámara -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     :root {
-      --primary: #2563eb;
-      --success: #16a34a;
-      --success-hover: #15803d;
-      --bg: #f3f4f6;
+      --primary: #1d4ed8;
+      --green: #16a34a;
+      --orange: #ea580c;
+      --red: #dc2626;
+      --bg: #0f172a;
       --card: #ffffff;
-      --text: #1f2937;
+      --text: #111827;
       --muted: #6b7280;
     }
     * { box-sizing: border-box; }
@@ -24,70 +23,90 @@
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 16px;
+      padding: 14px;
     }
-    .container {
-      max-width: 500px;
-      margin: 0 auto;
+    .container { max-width: 520px; margin: 0 auto; }
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: #1e293b;
+      color: #94a3b8;
+    }
+    .tab-btn.active {
+      background: #2563eb;
+      color: #ffffff;
     }
     .card {
       background: var(--card);
       padding: 20px;
-      border-radius: 14px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-      margin-bottom: 18px;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      margin-bottom: 16px;
     }
-    h1 { font-size: 1.3rem; margin: 0 0 12px 0; text-align: center; }
-    #reader {
-      width: 100%;
-      border-radius: 10px;
-      overflow: hidden;
-      background: #000;
-    }
-    .status-msg {
-      text-align: center;
-      font-size: 0.9rem;
-      color: var(--muted);
-      margin-top: 10px;
-    }
-    /* Ficha del cliente escaneado */
-    .ficha { display: none; border-top: 5px solid var(--primary); }
-    .ficha-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    h1 { font-size: 1.2rem; margin: 0 0 12px 0; text-align: center; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+    .status-msg { text-align: center; font-size: 0.88rem; color: var(--muted); margin: 10px 0 0 0; }
+
+    /* Ficha principal de la Hostess */
+    .ficha { display: none; border-top: 6px solid var(--primary); }
+    .hero-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
       margin-bottom: 14px;
     }
-    .badge {
-      padding: 5px 10px;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 700;
-    }
-    .badge-pendiente { background: #fef3c7; color: #92400e; }
-    .badge-llegada { background: #dcfce7; color: #166534; }
-    .dato { margin-bottom: 12px; }
-    .dato-label {
-      font-size: 0.78rem;
+    .label-sm {
+      font-size: 0.72rem;
       text-transform: uppercase;
-      color: var(--muted);
       font-weight: 700;
-      letter-spacing: 0.03em;
+      color: var(--muted);
+      letter-spacing: 0.04em;
     }
-    .dato-valor {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-top: 2px;
-    }
-    .notas-box {
-      background: #f9fafb;
-      padding: 10px 12px;
+    .val-cliente { font-size: 1.45rem; font-weight: 800; color: #0f172a; margin: 2px 0 10px 0; }
+    .val-servicio {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1e40af;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 5px 12px;
       border-radius: 8px;
-      border-left: 3px solid #d1d5db;
-      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+    .val-vin {
+      font-family: monospace;
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 8px 12px;
+      border-radius: 8px;
+      letter-spacing: 1px;
       margin-top: 4px;
     }
-    button {
+    .extra-info {
+      font-size: 0.88rem;
+      color: #374151;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+    .acciones-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .btn {
       width: 100%;
       padding: 14px;
       border: none;
@@ -95,92 +114,162 @@
       font-size: 1rem;
       font-weight: 700;
       cursor: pointer;
-      margin-top: 10px;
+      color: white;
     }
-    .btn-confirmar { background: var(--success); color: white; }
-    .btn-confirmar:hover { background: var(--success-hover); }
-    .btn-otro { background: #e5e7eb; color: #374151; }
+    .btn-asistio { background: var(--green); }
+    .btn-tarde { background: var(--orange); }
+    .btn-noshow { background: var(--red); }
+    .btn-secundario { background: #e5e7eb; color: #1f2937; margin-top: 10px; }
+
+    /* Formulario Sin Cita */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;
+    }
+    .badge-estado {
+      float: right;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #e2e8f0;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="card">
-    <h1>Recepción · Escáner de Citas</h1>
-    <div id="reader"></div>
-    <p id="statusText" class="status-msg">Apunta la cámara al código QR del cliente</p>
+  <div class="tabs">
+    <button id="tabEscaner" class="tab-btn active" onclick="cambiarVista('escaner')">Escanear QR</button>
+    <button id="tabSinCita" class="tab-btn" onclick="cambiarVista('sincita')">+ Llegó Sin Cita</button>
   </div>
 
-  <!-- Ficha de información del cliente -->
-  <div id="fichaCliente" class="card ficha">
-    <div class="ficha-header">
-      <span style="font-size: 0.85rem; color: var(--muted);">Cita verificada</span>
-      <span id="estadoBadge" class="badge"></span>
+  <!-- VISTA 1: ESCÁNER -->
+  <div id="vistaEscaner">
+    <div class="card">
+      <h1>Escáner de Recepción</h1>
+      <div id="reader"></div>
+      <p id="statusText" class="status-msg">Apunta la cámara al QR del cliente</p>
     </div>
 
-    <div class="dato">
-      <div class="dato-label">Cliente</div>
-      <div id="valNombre" class="dato-valor" style="font-size: 1.35rem;"></div>
-    </div>
+    <div id="fichaCliente" class="card ficha">
+      <span id="estadoActualBadge" class="badge-estado"></span>
+      <div class="hero-box">
+        <div class="label-sm">Cliente</div>
+        <div id="valNombre" class="val-cliente"></div>
 
-    <div class="dato">
-      <div class="dato-label">Fecha y Hora Programada</div>
-      <div id="valFecha" class="dato-valor"></div>
-    </div>
+        <div class="label-sm">Tipo de Servicio</div>
+        <div><span id="valServicio" class="val-servicio"></span></div>
 
-    <div class="dato">
-      <div class="dato-label">Asesor Asignado</div>
-      <div id="valAsesor" class="dato-valor"></div>
-    </div>
+        <div class="label-sm">VIN del Vehículo</div>
+        <div id="valVin" class="val-vin"></div>
+      </div>
 
-    <div class="dato">
-      <div class="dato-label">Teléfono</div>
-      <div id="valTelefono" class="dato-valor"></div>
-    </div>
+      <div id="extraDatos" class="extra-info"></div>
 
-    <div class="dato">
-      <div class="dato-label">Notas / Motivo</div>
-      <div id="valNotas" class="notas-box"></div>
-    </div>
+      <div class="label-sm" style="margin-bottom:8px;">Marcar estatus de asistencia:</div>
+      <div class="acciones-grid">
+        <button class="btn btn-asistio" onclick="actualizarEstatus('Asistió')">Asistió a tiempo</button>
+        <button class="btn btn-tarde" onclick="actualizarEstatus('Llegó tarde')">Llegó tarde</button>
+        <button class="btn btn-noshow" onclick="actualizarEstatus('No asistió')">No asistió (No Show)</button>
+      </div>
 
-    <button id="btnConfirmar" class="btn-confirmar" onclick="confirmarLlegada()">
-      Confirmar Llegada a Recepción
-    </button>
-    <button class="btn-otro" onclick="reiniciarEscaner()">
-      Escanear Siguiente Cliente
-    </button>
+      <button class="btn btn-secundario" onclick="reiniciarEscaner()">Escanear Siguiente Cliente</button>
+    </div>
+  </div>
+
+  <!-- VISTA 2: CAPTURA SIN CITA -->
+  <div id="vistaSinCita" style="display:none;">
+    <div class="card">
+      <h1>Registro Rápido · Sin Cita</h1>
+      <form id="formSinCita">
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input type="text" id="sc_nombre" required placeholder="Nombre del cliente">
+        </div>
+        <div class="form-group">
+          <label>Teléfono *</label>
+          <input type="tel" id="sc_telefono" required placeholder="10 dígitos">
+        </div>
+        <div class="form-group">
+          <label>Correo electrónico *</label>
+          <input type="email" id="sc_correo" required placeholder="cliente@correo.com">
+        </div>
+        <div class="form-group">
+          <label>Modelo del vehículo *</label>
+          <input type="text" id="sc_modelo" required placeholder="Ej. Yaris 2023">
+        </div>
+        <div class="form-group">
+          <label>Placa</label>
+          <input type="text" id="sc_placa" placeholder="ABC-123-D" style="text-transform:uppercase;">
+        </div>
+        <div class="form-group">
+          <label>VIN (17 caracteres)</label>
+          <input type="text" id="sc_vin" maxlength="17" placeholder="Número de serie" style="text-transform:uppercase;">
+        </div>
+        <div class="form-group">
+          <label>Tipo de servicio *</label>
+          <select id="sc_servicio" required>
+            <option value="Mantenimiento">Mantenimiento</option>
+            <option value="Diagnóstico">Diagnóstico</option>
+            <option value="Reparación">Reparación</option>
+          </select>
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="sc_valet" style="width:18px; height:18px;">
+          <label for="sc_valet" style="margin:0;">Requiere Valet (Sin costo)</label>
+        </div>
+        <div class="form-group">
+          <label>Comentarios adicionales</label>
+          <textarea id="sc_notas" rows="2"></textarea>
+        </div>
+        <button type="submit" id="btnGuardarSC" class="btn" style="background:#2563eb;">
+          Registrar Ingreso Sin Cita
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 
 <script>
   const SUPABASE_URL = 'https://kfspfziawwwzlqfsvpep.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_O8dWIEqgtNt3uSO_964wkg_-3AaUdgV';
-
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   let citaActual = null;
   let html5QrcodeScanner = null;
   let bloqueado = false;
 
-  // Iniciar cámara trasera
+  function cambiarVista(vista) {
+    if (vista === 'escaner') {
+      document.getElementById('vistaEscaner').style.display = 'block';
+      document.getElementById('vistaSinCita').style.display = 'none';
+      document.getElementById('tabEscaner').classList.add('active');
+      document.getElementById('tabSinCita').classList.remove('active');
+    } else {
+      document.getElementById('vistaEscaner').style.display = 'none';
+      document.getElementById('vistaSinCita').style.display = 'block';
+      document.getElementById('tabEscaner').classList.remove('active');
+      document.getElementById('tabSinCita').classList.add('active');
+    }
+  }
+
   function iniciarCamara() {
     html5QrcodeScanner = new Html5Qrcode("reader");
     html5QrcodeScanner.start(
       { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 240, height: 240 } },
+      { fps: 10, qrbox: { width: 230, height: 230 } },
       onScanSuccess
-    ).catch(err => {
-      document.getElementById('statusText').textContent =
-        "No se pudo acceder a la cámara. Asegúrate de dar permisos en tu navegador.";
-      console.error(err);
+    ).catch(() => {
+      document.getElementById('statusText').textContent = "Activa el permiso de cámara en tu navegador.";
     });
   }
 
-  // Cuando la cámara detecta un QR
   async function onScanSuccess(decodedText) {
     if (bloqueado) return;
     bloqueado = true;
-
-    document.getElementById('statusText').textContent = "Buscando cita en el sistema...";
+    document.getElementById('statusText').textContent = "Consultando cita...";
 
     const { data, error } = await supabaseClient
       .from('citas')
@@ -189,13 +278,12 @@
       .single();
 
     if (error || !data) {
-      alert("Código QR no válido o cita no encontrada.");
+      alert("Código QR no encontrado.");
       bloqueado = false;
-      document.getElementById('statusText').textContent = "Apunta la cámara al código QR del cliente";
+      document.getElementById('statusText').textContent = "Apunta la cámara al QR del cliente";
       return;
     }
 
-    // Pausar cámara mientras se revisa la ficha
     html5QrcodeScanner.pause();
     mostrarFicha(data);
   }
@@ -203,44 +291,33 @@
   function mostrarFicha(cita) {
     citaActual = cita;
     document.getElementById('fichaCliente').style.display = 'block';
-    document.getElementById('statusText').textContent = "Cita encontrada";
+    document.getElementById('statusText').textContent = "Cita cargada";
+    document.getElementById('estadoActualBadge').textContent = cita.estado;
 
     document.getElementById('valNombre').textContent = cita.cliente_nombre;
-    document.getElementById('valFecha').textContent = new Date(cita.fecha_cita).toLocaleString('es-MX', {
-      dateStyle: 'full',
+    document.getElementById('valServicio').textContent = cita.tipo_servicio || 'No especificado';
+    document.getElementById('valVin').textContent = cita.vin || 'SIN VIN REGISTRADO';
+
+    const fechaTexto = new Date(cita.fecha_cita).toLocaleString('es-MX', {
+      dateStyle: 'medium',
       timeStyle: 'short'
     });
-    document.getElementById('valAsesor').textContent = cita.asesor;
-    document.getElementById('valTelefono').textContent = cita.telefono || 'No registrado';
-    document.getElementById('valNotas').textContent = cita.notas || 'Sin notas adicionales';
 
-    const badge = document.getElementById('estadoBadge');
-    const btnConfirmar = document.getElementById('btnConfirmar');
-
-    if (cita.estado === 'En recepción') {
-      badge.textContent = 'En recepción';
-      badge.className = 'badge badge-llegada';
-      btnConfirmar.style.display = 'none';
-    } else {
-      badge.textContent = cita.estado;
-      badge.className = 'badge badge-pendiente';
-      btnConfirmar.style.display = 'block';
-      btnConfirmar.disabled = false;
-      btnConfirmar.textContent = 'Confirmar Llegada a Recepción';
-    }
+    document.getElementById('extraDatos').innerHTML = `
+      <strong>Vehículo:</strong> ${cita.modelo || 'N/A'} ${cita.placa ? '· Placa: ' + cita.placa : ''}<br>
+      <strong>Hora cita:</strong> ${fechaTexto}<br>
+      <strong>Valet:</strong> ${cita.requiere_valet ? 'SÍ requiere (Sin costo)' : 'No requiere'}<br>
+      ${cita.notas ? '<strong>Notas:</strong> ' + cita.notas : ''}
+    `;
   }
 
-  // Actualizar estado en Supabase (dispara el tiempo real en la otra pantalla)
-  async function confirmarLlegada() {
+  async function actualizarEstatus(nuevoEstado) {
     if (!citaActual) return;
-    const btn = document.getElementById('btnConfirmar');
-    btn.disabled = true;
-    btn.textContent = 'Registrando llegada...';
 
     const { data, error } = await supabaseClient
       .from('citas')
       .update({
-        estado: 'En recepción',
+        estado: nuevoEstado,
         hora_llegada: new Date().toISOString()
       })
       .eq('id', citaActual.id)
@@ -249,23 +326,60 @@
 
     if (error) {
       alert("Error al actualizar: " + error.message);
-      btn.disabled = false;
       return;
     }
 
     mostrarFicha(data);
+    alert(`Estatus actualizado a: ${nuevoEstado}`);
   }
 
   function reiniciarEscaner() {
     citaActual = null;
     bloqueado = false;
     document.getElementById('fichaCliente').style.display = 'none';
-    document.getElementById('statusText').textContent = "Apunta la cámara al código QR del cliente";
+    document.getElementById('statusText').textContent = "Apunta la cámara al QR del cliente";
     html5QrcodeScanner.resume();
   }
 
+  // Registro rápido Sin Cita
+  document.getElementById('formSinCita').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnGuardarSC');
+    btn.disabled = true;
+    btn.textContent = 'Registrando...';
+
+    const registro = {
+      cliente_nombre: document.getElementById('sc_nombre').value.trim(),
+      telefono: document.getElementById('sc_telefono').value.trim(),
+      correo: document.getElementById('sc_correo').value.trim(),
+      modelo: document.getElementById('sc_modelo').value.trim(),
+      placa: document.getElementById('sc_placa').value.trim().toUpperCase(),
+      vin: document.getElementById('sc_vin').value.trim().toUpperCase(),
+      tipo_servicio: document.getElementById('sc_servicio').value,
+      requiere_valet: document.getElementById('sc_valet').checked,
+      notas: document.getElementById('sc_notas').value.trim(),
+      fecha_cita: new Date().toISOString(),
+      hora_llegada: new Date().toISOString(),
+      estado: 'Sin cita',
+      es_sin_cita: true
+    };
+
+    const { error } = await supabaseClient.from('citas').insert([registro]);
+
+    btn.disabled = false;
+    btn.textContent = 'Registrar Ingreso Sin Cita';
+
+    if (error) {
+      alert('Error al registrar: ' + error.message);
+      return;
+    }
+
+    document.getElementById('formSinCita').reset();
+    alert('Cliente sin cita registrado correctamente en el monitor.');
+    cambiarVista('escaner');
+  });
+
   iniciarCamara();
 </script>
-
 </body>
 </html>
