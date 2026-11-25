@@ -3,17 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registro de Citas de Servicio</title>
+  <title>Registro de Citas de Servicio · Toyota Cuautitlán</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
-      --primary: #1d4ed8;
-      --primary-hover: #1e40af;
-      --bg: #f3f4f6;
+      --primary: #c8102e;
+      --primary-hover: #a30c24;
+      --primary-soft: #fdf2f4;
+      --primary-border: #f5c2cb;
+      --bg: #f4f5f7;
       --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
+      --text: #1f242b;
+      --muted: #5f6773;
+      --border: #e2e6ec;
     }
     * { box-sizing: border-box; }
     body {
@@ -27,7 +30,41 @@
       max-width: 1100px;
       margin: 0 auto;
       display: grid;
-      gap: 24px;
+      gap: 20px;
+    }
+    .top-bar {
+      background: var(--card);
+      padding: 16px 24px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(31, 36, 43, 0.05);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-logo {
+      height: 46px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+    .brand-title {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .brand-sub {
+      margin: 2px 0 0 0;
+      font-size: 0.82rem;
+      color: var(--muted);
     }
     @media (min-width: 850px) {
       .grid-top {
@@ -40,9 +77,10 @@
       background: var(--card);
       padding: 24px;
       border-radius: 14px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 8px rgba(31, 36, 43, 0.05);
+      border: 1px solid var(--border);
     }
-    h2 { margin-top: 0; font-size: 1.25rem; }
+    h2 { margin-top: 0; font-size: 1.2rem; color: var(--text); }
     .form-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -57,19 +95,25 @@
       font-size: 0.85rem;
       font-weight: 600;
       margin-bottom: 5px;
+      color: var(--text);
     }
-    .req { color: #dc2626; }
+    .req { color: var(--primary); }
     input, select, textarea {
       width: 100%;
       padding: 10px 12px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #cfd5df;
       border-radius: 8px;
       font-size: 0.95rem;
       background: #fff;
+      color: var(--text);
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
     }
     .valet-box {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
+      background: #f8f9fa;
+      border: 1px solid var(--border);
       padding: 12px 14px;
       border-radius: 10px;
       display: flex;
@@ -77,8 +121,9 @@
       gap: 10px;
     }
     .valet-box input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
+      width: 19px;
+      height: 19px;
+      accent-color: var(--primary);
       cursor: pointer;
     }
     button {
@@ -91,14 +136,18 @@
       font-weight: 600;
       cursor: pointer;
       width: 100%;
+      transition: background-color 0.15s ease;
     }
     button:hover { background-color: var(--primary-hover); }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-outline {
-      background: #eff6ff;
+      background: var(--primary-soft);
       color: var(--primary);
-      border: 1px solid #bfdbfe;
+      border: 1px solid var(--primary-border);
       margin-top: 12px;
+    }
+    .btn-outline:hover {
+      background: #fae4e8;
     }
     .btn-sm { padding: 6px 10px; font-size: 0.8rem; width: auto; margin: 0; }
     .qr-box {
@@ -111,7 +160,7 @@
     #qrContainer {
       padding: 16px;
       background: white;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border);
       border-radius: 8px;
       margin: 12px 0;
     }
@@ -126,28 +175,39 @@
       align-items: center;
       gap: 6px;
       font-size: 0.8rem;
-      background: #dcfce7;
-      color: #166534;
-      padding: 4px 10px;
+      background: #eef6f0;
+      color: #1e6038;
+      padding: 5px 11px;
       border-radius: 999px;
       font-weight: 600;
     }
-    .dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; }
+    .dot { width: 8px; height: 8px; background: #227a46; border-radius: 50%; }
     .table-wrapper { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-    th, td { text-align: left; padding: 11px; border-bottom: 1px solid #e5e7eb; }
-    th { background: #f9fafb; color: var(--muted); font-weight: 600; }
+    th, td { text-align: left; padding: 11px; border-bottom: 1px solid var(--border); }
+    th { background: #f8f9fb; color: var(--muted); font-weight: 600; }
     .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; display: inline-block; }
-    .b-pendiente { background: #fef3c7; color: #92400e; }
-    .b-asistio { background: #dcfce7; color: #166534; }
-    .b-tarde { background: #ffedd5; color: #9a3412; }
-    .b-noshow { background: #fee2e2; color: #991b1b; }
-    .b-sincita { background: #e0e7ff; color: #3730a3; }
+    .b-pendiente { background: #fef5df; color: #8a5a00; }
+    .b-asistio { background: #e8f5ec; color: #1a6337; }
+    .b-tarde { background: #fff0e5; color: #9c3d0c; }
+    .b-noshow { background: #fde8ec; color: #9e1429; }
+    .b-sincita { background: #eceff4; color: #2b3340; }
   </style>
 </head>
 <body>
 
 <div class="container">
+  <header class="top-bar">
+    <div class="brand-box">
+      <img src="logo.png" alt="Logo Toyota Cuautitlán" class="brand-logo" onerror="this.style.display='none'">
+      <div>
+        <p class="brand-title">Recepción de Servicio Automotriz</p>
+        <p class="brand-sub">Registro de citas, códigos QR y seguimiento en tiempo real</p>
+      </div>
+    </div>
+    <span class="live-badge"><span class="dot"></span> Sistema activo</span>
+  </header>
+
   <div class="grid-top">
     <div class="card">
       <h2>Agendar Cita de Servicio</h2>
@@ -256,7 +316,7 @@
           </tr>
         </thead>
         <tbody id="tablaCitas">
-          <tr><td colspan="6" style="text-align:center; color:#6b7280;">Cargando citas...</td></tr>
+          <tr><td colspan="6" style="text-align:center; color:#5f6773;">Cargando citas...</td></tr>
         </tbody>
       </table>
     </div>
@@ -305,7 +365,7 @@
   function renderizarTabla(citas) {
     const tbody = document.getElementById('tablaCitas');
     if (!citas || citas.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#6b7280;">No hay citas registradas aún.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#5f6773;">No hay citas registradas aún.</td></tr>';
       return;
     }
 
@@ -320,15 +380,15 @@
       tr.innerHTML = `
         <td>
           <strong>${cita.cliente_nombre}</strong><br>
-          <small style="color:#6b7280;">${cita.telefono || ''} ${cita.correo ? '· ' + cita.correo : ''}</small>
+          <small style="color:#5f6773;">${cita.telefono || ''} ${cita.correo ? '· ' + cita.correo : ''}</small>
         </td>
         <td>
           <strong>${cita.modelo || 'N/A'}</strong> ${cita.placa ? '(' + cita.placa + ')' : ''}<br>
-          <small style="color:#6b7280;">VIN: ${cita.vin || 'No registrado'}</small>
+          <small style="color:#5f6773;">VIN: ${cita.vin || 'No registrado'}</small>
         </td>
         <td>
           ${cita.tipo_servicio || 'General'}<br>
-          ${cita.requiere_valet ? '<small style="color:#1d4ed8; font-weight:600;">Con Valet (Sin costo)</small>' : '<small style="color:#9ca3af;">Sin Valet</small>'}
+          ${cita.requiere_valet ? '<small style="color:#c8102e; font-weight:600;">Con Valet (Sin costo)</small>' : '<small style="color:#8a93a0;">Sin Valet</small>'}
         </td>
         <td>${fechaFormateada}</td>
         <td><span class="badge ${obtenerClaseEstado(cita.estado)}">${cita.estado}</span></td>
@@ -399,7 +459,7 @@
       text: cita.id,
       width: 200,
       height: 200,
-      colorDark: '#000000',
+      colorDark: '#1f242b',
       colorLight: '#ffffff',
       correctLevel: QRCode.CorrectLevel.H
     });
